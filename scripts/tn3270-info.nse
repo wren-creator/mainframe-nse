@@ -1,6 +1,4 @@
 local shortport = require "shortport"
-local nmap = require "nmap"
-local stdnse = require "stdnse"
 local tn3270 = require "tn3270"
 
 description = [[
@@ -44,52 +42,12 @@ author = "Britley Hoff"
 license = "Same as the parent repo (GPLv3) - see LICENSE"
 categories = { "discovery", "safe" }
 
+-- Real TN3270E ports only. For local testing against web3270's mock LPARs
+-- (which default to non-privileged ports 3270/3271), use
+-- test/tn3270-info-local.nse instead of editing this list -- see
+-- test/README.md.
 portrule = shortport.port_or_service({ 23, 992 }, { "tn3270", "tn3270s" }, "tcp")
 
 action = function(host, port)
-  local sock = nmap.new_socket()
-  local use_tls = (port.number == 992) or (port.service == "tn3270s")
-
-  local status, err
-  if use_tls then
-    status, err = sock:connect(host, port, "ssl")
-  else
-    status, err = sock:connect(host, port)
-  end
-  if not status then
-    return stdnse.format_output(false, "could not connect: " .. tostring(err))
-  end
-
-  local ok, result = tn3270.negotiate(sock, { model = "3278-2" })
-  sock:close()
-
-  if not ok then
-    return stdnse.format_output(false, tostring(result))
-  end
-
-  local out = stdnse.output_table()
-  out.tn3270e = result.tn3270e
-  out.deviceType = result.deviceType or "(classic TN3270, no TN3270E)"
-  out.luRequested = result.luRequested or "(none requested)"
-  out.luGranted = result.luGranted or "(none)"
-  if result.rejected then
-    out.deviceTypeRejected = result.rejectReason
-  end
-
-  if result.screenText and result.screenText:match("%S") then
-    out.hostType = tn3270.classify_host(result.screenText)
-    local esm = tn3270.classify_esm(result.screenText)
-    if esm.product ~= "unknown" then
-      out.securityManager = string.format("%s (%d%% confidence%s)",
-        esm.product, math.floor(esm.confidence * 100 + 0.5),
-        esm.runnerUp and (", vs " .. esm.runnerUp) or "")
-      if #esm.evidence > 0 then
-        out.evidence = esm.evidence[1].matched
-      end
-    end
-  else
-    out.hostType = "unknown (no screen text read)"
-  end
-
-  return out
+  return tn3270.scan(host, port)
 end

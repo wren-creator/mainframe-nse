@@ -16,6 +16,7 @@
 -- @license Same as the parent repo (GPLv3) - see LICENSE
 
 local stdnse = require "stdnse"
+local nmap = require "nmap"
 
 local tn3270 = {}
 
@@ -537,6 +538,65 @@ function tn3270.negotiate(sock, opts)
   end
 
   return true, result
+end
+
+-- ── Shared NSE action body ───────────────────────────────────────────────
+
+--- Connect, negotiate, and classify -- the whole scan in one call, shared
+-- by scripts/tn3270-info.nse (the real script, portrule 23/992) and
+-- test/tn3270-info-local.nse (the same thing with the mock LPARs' default
+-- ports added to the portrule, for local testing without root). Keeping
+-- this in the library instead of duplicated in each .nse file means the
+-- two scripts can never drift apart from each other.
+--
+-- @param host, port  the values Nmap's portrule/action machinery passes in
+-- @return a stdnse output table, or a formatted error string
+function tn3270.scan(host, port)
+  local sock = nmap.new_socket()
+  local use_tls = (port.number == 992) or (port.service == "tn3270s")
+
+  local status, err
+  if use_tls then
+    status, err = sock:connect(host, port, "ssl")
+  else
+    status, err = sock:connect(host, port)
+  end
+  if not status then
+    return stdnse.format_output(false, "could not connect: " .. tostring(err))
+  end
+
+  local ok, result = tn3270.negotiate(sock, { model = "3278-2" })
+  sock:close()
+
+  if not ok then
+    return stdnse.format_output(false, tostring(result))
+  end
+
+  local out = stdnse.output_table()
+  out.tn3270e = result.tn3270e
+  out.deviceType = result.deviceType or "(classic TN3270, no TN3270E)"
+  out.luRequested = result.luRequested or "(none requested)"
+  out.luGranted = result.luGranted or "(none)"
+  if result.rejected then
+    out.deviceTypeRejected = result.rejectReason
+  end
+
+  if result.screenText and result.screenText:match("%S") then
+    out.hostType = tn3270.classify_host(result.screenText)
+    local esm = tn3270.classify_esm(result.screenText)
+    if esm.product ~= "unknown" then
+      out.securityManager = string.format("%s (%d%% confidence%s)",
+        esm.product, math.floor(esm.confidence * 100 + 0.5),
+        esm.runnerUp and (", vs " .. esm.runnerUp) or "")
+      if #esm.evidence > 0 then
+        out.evidence = esm.evidence[1].matched
+      end
+    end
+  else
+    out.hostType = "unknown (no screen text read)"
+  end
+
+  return out
 end
 
 return tn3270

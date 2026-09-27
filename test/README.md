@@ -1,22 +1,25 @@
 # Testing tn3270-info.nse
 
-There's no public TN3270E service safe to point a new script at, so this
-gets tested against `web3270`'s mock LPAR servers instead. **Not yet run
-end-to-end** — this documents how to do it, not a confirmed-passing result.
+There's no public TN3270E service safe to point this at, so it's tested
+against `web3270`'s mock LPAR servers instead. **This has been run
+end-to-end** against both mocks (see "Verified results" below) — this isn't
+just a plan, it's also the record of what that testing found and fixed.
 
 ## 1. Install the library where Nmap can find it
 
 `lib/tn3270.lua` isn't part of stock Nmap's `nselib`, so `require "tn3270"`
-needs it placed somewhere Nmap's Lua search path covers. Simplest option,
-copy it into your Nmap install's own library directory:
+needs it placed somewhere Nmap's Lua search path covers. Copy it into your
+Nmap install's own library directory:
 
 ```bash
 cp ~/git/mainframe-nse/lib/tn3270.lua "$(nmap --datadir)/nselib/tn3270.lua"
 ```
 
-(`nmap --datadir` prints the directory, typically `/usr/local/share/nmap` or
-`/opt/homebrew/share/nmap` on macOS Homebrew installs.) Re-run this after
-any edit to `lib/tn3270.lua` — Nmap doesn't read it from this repo directly.
+(`nmap --datadir` prints the directory; on this machine it's
+`/opt/homebrew/Cellar/nmap/<version>/share/nmap`, and `nmap --datadir` alone
+without a following path errors — use `find "$(brew --prefix nmap 2>/dev/null || echo /opt/homebrew)" -type d -name nselib` if it moves.)
+Re-run this cp after any edit to `lib/tn3270.lua` — Nmap doesn't read it from
+this repo directly, only from wherever this copy lands.
 
 ## 2. Start a mock target
 
@@ -30,15 +33,34 @@ node mock-lpar/mock-zvm.js      # z/VM mock, listens on tcp/3271
 
 ## 3. Run the script
 
+**The real script's portrule only matches port 23, port 992, or a service
+literally named `tn3270`/`tn3270s`** — the mocks' default ports (3270/3271)
+match neither, and both real TN3270E ports are privileged (need root to
+bind). Two ways to actually run it locally:
+
+**A — real port, real script, needs sudo both sides:**
+
 ```bash
-nmap --script ~/git/mainframe-nse/scripts/tn3270-info.nse -p 3270 localhost
-nmap --script ~/git/mainframe-nse/scripts/tn3270-info.nse -p 3271 localhost
+sudo MOCK_PORT=23 node mock-lpar/mock-lpar.js
+sudo nmap --script ~/git/mainframe-nse/scripts/tn3270-info.nse -p23 localhost
 ```
 
-(`--script <path>` works with an absolute/relative path directly, no need to
-copy the `.nse` file into Nmap's own `scripts/` directory the way the
-library has to be copied — only `require`d libraries need to be found via
-Nmap's Lua path.)
+**B — mock's default port, no sudo, using the local-test variant:**
+
+```bash
+nmap --script ~/git/mainframe-nse/test/tn3270-info-local.nse -p 3270 localhost
+nmap --script ~/git/mainframe-nse/test/tn3270-info-local.nse -p 3271 localhost
+```
+
+`test/tn3270-info-local.nse` is committed in this repo specifically so this
+doesn't need regenerating by hand each time — it's the same script, sharing
+all its logic with the real one via `tn3270.scan()` in `lib/tn3270.lua`, just
+with `3270`/`3271` added to its portrule. Never point it at anything but a
+local mock.
+
+(`--script <path>` works with an absolute/relative path directly for the
+`.nse` file itself, no need to copy it into Nmap's own `scripts/` directory —
+only `require`d libraries need to be found via Nmap's Lua path.)
 
 ## 4. Cross-check the verdict
 
@@ -58,9 +80,50 @@ JS `_FP_RULES`/`RULES` tables, or the negotiation/EBCDIC-extraction layer in
 `result.log` (enable with `-d2` for `stdnse.debug2` output) to see the raw
 negotiation trace before digging into the classification tables.
 
+## Verified results (2026-09-26)
+
+Both mocks tested via option B above. Three real bugs turned up and got
+fixed before anything was committed:
+
+1. **Mutual re-ack infinite loop against the z/OS mock.** It has no
+   negotiation-state tracking on its side — when the client's `WILL BINARY`/
+   `WILL EOR` acks came back in, its `handleTelnetCmd` treated them as fresh
+   offers and replied with another `DO BINARY`/`DO EOR`, which the client
+   then re-acked, forever, at 100% CPU. Fixed with idempotency guards in
+   `tn3270.negotiate()` (a `sent` table — same shape as `session.js`'s own
+   `_willSend`/`_doSent` flags) so every option is only ever acked once.
+2. **False ACF2 classification on a real RACF screen.** The JS original's
+   ACF2 "ACF LOGON" rule uses `\bACF\s+LOGON\b` (word-bounded, so it can't
+   match inside "**R**ACF LOGON"); the Lua translation dropped the boundary
+   (Lua patterns have no `\b`), so it substring-matched inside the mock's
+   real "RACF LOGON parameters:" banner. Fixed with `%f[%a]`/`%f[%A]`
+   frontier patterns (Lua's equivalent) on every ACF2 rule that could
+   collide with "RACF": `acf2-word`, `acf2-msgid`, `acf2-logon-hdr` in both
+   `ESM_RULES` and `HOST_RULES`.
+3. **z/VM mock never sends a `SEND DEVICE-TYPE` prompt.** It only implements
+   the client-initiates style (`subCmd === TN3E_DEVICE_TYPE && payload[2]
+   === TN3E_REQUEST`, unprompted) — matching what `session.js`'s own client
+   does (`_sendTn3270eDeviceType()`, called unconditionally, never waiting to
+   be asked). `tn3270.negotiate()` originally only reacted to a `SEND`
+   prompt. Fixed by extracting `send_device_type_request_once()` and calling
+   it proactively right after `WILL TN3270E`, guarded so it's a no-op if a
+   `SEND` prompt shows up anyway (covers hosts that do it the mock-lpar.js
+   way).
+
+After those three fixes, both mocks come back clean:
+
+- **z/OS mock (port 3270):** `tn3270e: true`, `deviceType: IBM-3278-2`,
+  `hostType: RACF`, `securityManager: RACF (71% confidence)`, evidence
+  `RACF LOGON PARAMETERS`. The 71% is an exact match against
+  `esm-fingerprint.js`'s own math on its `RACF_LOGON` test fixture:
+  score 10 (weight 6 `racf-logon-hdr` + weight 4 `racf-word`) against
+  `10/(10+0+4) = 0.714`.
+- **z/VM mock (port 3271):** `tn3270e: true`, `deviceType: IBM-3278-2`,
+  `luGranted: ZVMLU01`, `hostType: z/VM`.
+
 ## Known gap
 
 `mock-lpar.js`/`mock-zvm.js` don't serve TLS, so the port-992 TLS path in
-`tn3270-info.nse` (`sock:connect(host, port, "ssl")`) is untested against
+`tn3270.scan()` (`sock:connect(host, port, "ssl")`) is still untested against
 anything. If a TLS-front-ended mock gets added later, retest that path
 specifically.
