@@ -77,6 +77,10 @@ sudo cp scripts/tn3270-info.nse "$(nmap --datadir)/scripts/tn3270-info.nse"
 nmap --script tn3270-info -p23 <target>
 ```
 
+If a scan fails, the script prints an `error` and a `trace` of the raw bytes
+the host sent and the options we answered, no `-d` needed. Send that trace
+along when reporting a host that won't negotiate.
+
 ## Testing
 
 See `test/README.md` — run against the `web3270` project's mock LPAR
