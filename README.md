@@ -63,7 +63,19 @@ from-scratch Lua reimplementation, cross-checked against (not copied from)
 
 Early / v1. See `docs/FEASIBILITY.md` for scope boundaries and
 `docs/NEGOTIATION-NOTES.md` for the TN3270E sub-negotiation reference this
-was built against. Local-only repo for now, not yet pushed to a remote.
+was built against. Public at https://github.com/wren-creator/mainframe-nse.
+
+## Installing
+
+Nmap finds `require`d libraries only in its own `nselib` directory, so copy
+both files, and recopy `lib/tn3270.lua` after every pull (a stale copy is the
+usual cause of odd errors):
+
+```bash
+sudo cp lib/tn3270.lua "$(nmap --datadir)/nselib/tn3270.lua"
+sudo cp scripts/tn3270-info.nse "$(nmap --datadir)/scripts/tn3270-info.nse"
+nmap --script tn3270-info -p23 <target>
+```
 
 ## Testing
 
