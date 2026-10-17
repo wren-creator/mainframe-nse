@@ -19,7 +19,7 @@ guards the logon.
 
 ## Relationship to WebTerm/3270
 
-This is a sibling project to [`web3270`](../web3270), the WebTerm/3270
+This is a sibling project to [`web3270`](https://github.com/wren-creator/web3270), the WebTerm/3270
 terminal emulator and security-testing bridge. That project already does
 deep, stateful TN3270 work (RACF enumeration, dataset scanning, protocol
 fuzzing, MITM, and more) but as an interactive terminal application, not a
