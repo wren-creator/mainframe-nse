@@ -46,6 +46,15 @@ from-scratch Lua reimplementation, cross-checked against (not copied from)
   - classified security manager, if a logon or error screen shows one
     (RACF / ACF2 / Top Secret / unknown)
 
+  **Non-default port?** The script only fires on 23, 992, or a service Nmap
+  already named `tn3270`/`tn3270s`. A mainframe on any other port usually gets
+  labeled `unknown` or something unrelated, so the script is skipped silently.
+  Tell it which ports to treat as TN3270E:
+
+  ```bash
+  nmap --script tn3270-info --script-args tn3270-info.ports=2023,4023 -p 2023,4023 <target>
+  ```
+
   It does **not** report TLS cipher suite or certificate details on port 992
   — that's already covered by Nmap's own `ssl-cert` and `ssl-enum-ciphers`
   scripts. Run those alongside this one for the full picture.

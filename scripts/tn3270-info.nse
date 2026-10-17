@@ -1,4 +1,5 @@
 local shortport = require "shortport"
+local stdnse = require "stdnse"
 local tn3270 = require "tn3270"
 
 description = [[
@@ -25,6 +26,11 @@ first unsolicited screen. Sends no credentials and no AID keys.
 ---
 -- @usage
 -- nmap --script tn3270-info -p 23,992 <target>
+-- nmap --script tn3270-info --script-args tn3270-info.ports=2023,4023 -p 2023,4023 <target>
+--
+-- @args tn3270-info.ports Comma-separated list of extra TCP ports to treat as
+--       TN3270E, for hosts that don't listen on 23 or 992. The ports still
+--       have to be scanned (-p) and open.
 --
 -- @output
 -- PORT    STATE SERVICE
@@ -42,11 +48,25 @@ author = "Britley Hoff"
 license = "Same as the parent repo (GPLv3) - see LICENSE"
 categories = { "discovery", "safe" }
 
--- Real TN3270E ports only. For local testing against web3270's mock LPARs
--- (which default to non-privileged ports 3270/3271), use
--- test/tn3270-info-local.nse instead of editing this list -- see
--- test/README.md.
-portrule = shortport.port_or_service({ 23, 992 }, { "tn3270", "tn3270s" }, "tcp")
+-- Default TN3270E ports (23, 992) or a service Nmap already named
+-- tn3270/tn3270s. A mainframe on a non-default port usually shows up as
+-- "unknown" or "telnet", so those hosts opt in with the tn3270-info.ports
+-- script arg. For local testing against web3270's mock LPARs (3270/3271) use
+-- test/tn3270-info-local.nse -- see test/README.md.
+local default_rule = shortport.port_or_service({ 23, 992 }, { "tn3270", "tn3270s" }, "tcp")
+
+local extra_ports = {}
+local arg_ports = stdnse.get_script_args("tn3270-info.ports")
+if arg_ports then
+  for p in tostring(arg_ports):gmatch("%d+") do
+    extra_ports[#extra_ports + 1] = tonumber(p)
+  end
+end
+local extra_rule = #extra_ports > 0 and shortport.portnumber(extra_ports, "tcp") or nil
+
+portrule = function(host, port)
+  return default_rule(host, port) or (extra_rule ~= nil and extra_rule(host, port))
+end
 
 action = function(host, port)
   return tn3270.scan(host, port)
