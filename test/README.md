@@ -121,6 +121,25 @@ After those three fixes, both mocks come back clean:
 - **z/VM mock (port 3271):** `tn3270e: true`, `deviceType: IBM-3278-2`,
   `luGranted: ZVMLU01`, `hostType: z/VM`.
 
+## Classic TN3270 / TERMINAL-TYPE hosts (2026-10-17)
+
+A class host (c3270 connected fine, the script timed out with "no data
+received during TN3270E negotiation") turned out to be a classic-style host:
+`DO TERMINAL-TYPE`, then `SB TERMINAL-TYPE SEND`, then silence until the
+client answers with `SB TERMINAL-TYPE IS <name>`. `handle_subneg()` dropped
+every non-TN3270E subnegotiation, so that reply was never sent. Fixed: it now
+answers `IBM-<model>` (up to 3 times, in case a host cycles its type list).
+
+The web3270 mocks only exercise the TN3270E path, so this was reproduced with
+a throwaway fake host (not committed): it sends `DO TTYPE` + `SB TTYPE SEND`,
+refuses to send a screen until it sees `SB TTYPE IS`, then sends `DO/WILL
+EOR`/`BINARY` and an EBCDIC "RACF LOGON PARAMETERS" screen ending in
+`IAC EOR`. Before the fix: host times out, script prints nothing. After: the
+script reports `tn3270e: false`, `deviceType: (classic TN3270, no
+TN3270E)`, `securityManager: RACF`. Both web3270 mocks re-checked, results
+unchanged. Remember to recopy `lib/tn3270.lua` into `nselib` after pulling
+this.
+
 ## Known gap
 
 `mock-lpar.js`/`mock-zvm.js` don't serve TLS, so the port-992 TLS path in

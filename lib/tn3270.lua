@@ -33,6 +33,8 @@ local EOR  = 0xEF
 -- ── Telnet options ──────────────────────────────────────────────────────
 local OPT_BINARY  = 0x00
 local OPT_TTYPE   = 0x18
+local TTYPE_IS    = 0x00 -- RFC 1091 TERMINAL-TYPE subnegotiation: IS / SEND
+local TTYPE_SEND  = 0x01
 local OPT_EOR     = 0x19
 local OPT_TN3270E = 0x28
 
@@ -319,6 +321,22 @@ end
 -- _decodeTn3270eSubneg, just 1-based instead of 0-based).
 local function handle_subneg(sub, result, model, lu_name, sock, log, sent)
   local opt = string.byte(sub, 1)
+
+  -- Classic TN3270 (and plenty of TN3270E hosts that probe TERMINAL-TYPE
+  -- first) follow DO TERMINAL-TYPE with SB TERMINAL-TYPE SEND and sit silent
+  -- until the client answers with its terminal name. Ignoring this made the
+  -- scan time out against such hosts (c3270 connected fine, this didn't).
+  -- Capped at a few replies in case a host cycles through its type list.
+  if opt == OPT_TTYPE then
+    if string.byte(sub, 2) == TTYPE_SEND and sent.ttype_is < 3 then
+      sent.ttype_is = sent.ttype_is + 1
+      local name = "IBM-" .. model
+      sock:send(string.char(IAC, SB, OPT_TTYPE, TTYPE_IS) .. name .. string.char(IAC, SE))
+      log("sent", "TERMINAL-TYPE IS " .. name)
+    end
+    return
+  end
+
   if opt ~= OPT_TN3270E then return end
   local func = string.byte(sub, 2)
   local subfunc = string.byte(sub, 3)
@@ -409,6 +427,7 @@ function tn3270.negotiate(sock, opts)
     will_tn3270e = false, will_ttype = false, will_eor = false, will_binary = false,
     do_binary = false, do_eor = false, do_tn3270e = false,
     device_type_request = false, functions_request = false,
+    ttype_is = 0,
   }
 
   local function fetch()
