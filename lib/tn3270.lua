@@ -433,6 +433,8 @@ function tn3270.negotiate(sock, opts)
   local function fetch()
     local status, data = sock:receive_bytes(1)
     if not status then return false end
+    log("recv", "raw " .. #data .. " bytes: " .. stdnse.tohex(string.sub(data, 1, 48)) ..
+      (#data > 48 and "..." or ""))
     buf = buf .. data
     return true
   end
@@ -538,7 +540,7 @@ function tn3270.negotiate(sock, opts)
     if got_screen then break end
     if not fetch() then
       if #record == 0 then
-        return false, "no data received during TN3270E negotiation"
+        return false, "no 3270 screen received during TN3270E negotiation (see trace)", result
       end
       break
     end
@@ -584,11 +586,18 @@ function tn3270.scan(host, port)
     return stdnse.format_output(false, "could not connect: " .. tostring(err))
   end
 
-  local ok, result = tn3270.negotiate(sock, { model = "3278-2" })
+  local ok, result, partial = tn3270.negotiate(sock, { model = "3278-2" })
   sock:close()
 
   if not ok then
-    return stdnse.format_output(false, tostring(result))
+    -- Returned as a normal output table, not format_output(false, ...):
+    -- NSE hides failed-status output unless -d is on, which made failures
+    -- look like the script never ran. Include the negotiation trace so a
+    -- failure is diagnosable from one plain run.
+    local out = stdnse.output_table()
+    out.error = tostring(result)
+    if partial and #partial.log > 0 then out.trace = partial.log end
+    return out
   end
 
   local out = stdnse.output_table()
