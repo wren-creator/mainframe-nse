@@ -140,6 +140,19 @@ TN3270E)`, `securityManager: RACF`. Both web3270 mocks re-checked, results
 unchanged. Remember to recopy `lib/tn3270.lua` into `nselib` after pulling
 this.
 
+## FUNCTIONS counter-proposal (2026-10-17)
+
+First run against the real class host (nmap -sV: "IBM Telnet TN3270
+(TN3270E)") timed out. The failure trace showed the DEVICE-TYPE handshake
+finishing (LU `TCP00021` assigned) and then the host answering our
+`FUNCTIONS REQUEST [DATA-STREAM-CTL]` with its own, empty `FUNCTIONS
+REQUEST`. RFC 2355 makes the client accept a counter-proposal with
+`FUNCTIONS IS <same list>`; we never did, so z/OS never sent the screen.
+`handle_subneg()` now answers (capped at 3). Reproduced with a throwaway fake
+host replaying that exact byte sequence (not committed): before the fix it
+saw no `FUNCTIONS IS`, after, it sent the screen and the script classified
+RACF. Classic-host fake and both web3270 mocks re-checked, unchanged.
+
 ## Known gap
 
 `mock-lpar.js`/`mock-zvm.js` don't serve TLS, so the port-992 TLS path in

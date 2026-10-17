@@ -379,6 +379,17 @@ local function handle_subneg(sub, result, model, lu_name, sock, log, sent)
     for k = 4, #sub do fns[#fns + 1] = string.byte(sub, k) end
     result.functionsGranted = fns
     log("recv", (subfunc == TN3E_IS) and "FUNCTIONS IS" or "FUNCTIONS REQUEST")
+    -- RFC 2355: a host that can't grant exactly what we asked for answers
+    -- with its own FUNCTIONS REQUEST listing what it will do (z/OS replies
+    -- with an empty list when it won't do DATA-STREAM-CTL). The client has
+    -- to accept that with FUNCTIONS IS <same list>, and the host won't send
+    -- the first screen until it does. Capped in case a host keeps countering.
+    if subfunc == TN3E_REQUEST and sent.functions_is < 3 then
+      sent.functions_is = sent.functions_is + 1
+      sock:send(string.char(IAC, SB, OPT_TN3270E, TN3E_FUNCTIONS, TN3E_IS) ..
+        string.sub(sub, 4) .. string.char(IAC, SE))
+      log("sent", "FUNCTIONS IS (accepting host's list, " .. #fns .. " function(s))")
+    end
   end
 end
 
@@ -427,7 +438,7 @@ function tn3270.negotiate(sock, opts)
     will_tn3270e = false, will_ttype = false, will_eor = false, will_binary = false,
     do_binary = false, do_eor = false, do_tn3270e = false,
     device_type_request = false, functions_request = false,
-    ttype_is = 0,
+    ttype_is = 0, functions_is = 0,
   }
 
   local function fetch()
