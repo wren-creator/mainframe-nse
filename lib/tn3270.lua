@@ -160,6 +160,12 @@ end
 -- literal alternatives instead of one combined pattern. Matched against the
 -- upper-cased screen text, so all patterns below are written upper-case.
 tn3270.HOST_RULES = {
+  -- VTAM application-selection / USS logon menu ("Enter L followed by the
+  -- APPLID", "VTAM Terminal = TCP00011"). Must stay first: these menus list
+  -- example APPLIDs like "L CICSTS56" and "L TSO", which would otherwise
+  -- trip the CICS/TSO rules below. Seen on the IBM ADCD z/OS lab emulator;
+  -- not in web3270's _FP_RULES, so this one is ours alone.
+  { name = "VTAM",       patterns = { "VTAM%s+TERMINAL", "%f[%a]APPLID%f[%A]", "\"?LOGON\"?%s+FOLLOWED%s+BY" } },
   { name = "ISPF",      patterns = { "OPTION%s*===>", "ISREDIT", "ISPF%s+PRIMARY", "ISPF%s+OPTION", "PDF%s+MENU" } },
   { name = "SDSF",       patterns = { "SDSF%s+OUTPUT", "SDSF%s+STATUS", "SDSF%s+LOG", "SDSF%s+DA", "SDSF%s+JES", "FILTER%s+OWNER" } },
   { name = "CICS",       patterns = { "CICS%s", "DFHCS", "CESF%s+LOGOFF", "TRANSACTION%s" } },
@@ -622,6 +628,8 @@ function tn3270.scan(host, port)
 
   if result.screenText and result.screenText:match("%S") then
     out.hostType = tn3270.classify_host(result.screenText)
+    local zr, zm = result.screenText:upper():match("Z/OS%s+V(%d+)R(%d+)")
+    if zr then out.osVersion = string.format("z/OS V%sR%s", zr, zm) end
     local esm = tn3270.classify_esm(result.screenText)
     if esm.product ~= "unknown" then
       out.securityManager = string.format("%s (%d%% confidence%s)",

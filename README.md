@@ -41,8 +41,8 @@ from-scratch Lua reimplementation, cross-checked against (not copied from)
   inbound 3270 data record, and reports:
   - negotiated device type / model, LU name (requested vs. granted)
   - screen geometry
-  - classified host type (TSO / z-VM / CICS / IMS / ISPF / SDSF / LOGON /
-    unknown)
+  - classified host type (VTAM menu / TSO / z-VM / CICS / IMS / ISPF / SDSF /
+    LOGON / unknown), plus the z/OS version when the banner shows one
   - classified security manager, if a logon or error screen shows one
     (RACF / ACF2 / Top Secret / unknown)
 

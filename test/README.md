@@ -153,6 +153,19 @@ host replaying that exact byte sequence (not committed): before the fix it
 saw no `FUNCTIONS IS`, after, it sent the screen and the script classified
 RACF. Classic-host fake and both web3270 mocks re-checked, unchanged.
 
+## VTAM logon menu (2026-10-17)
+
+With negotiation working, the class host (an IBM ADCD z/OS V2R5 lab
+emulator, not a production system) came back `hostType: unknown`. Its first
+screen is a VTAM application-selection menu ("VTAM Terminal = TCP00011",
+"Enter L followed by the APPLID", example APPLIDs like `L TSO`/`L CICSTS56`),
+which none of the rules covered. Added a `VTAM` rule at the top of
+`HOST_RULES` (it has to outrank CICS/TSO, since the menu's own examples
+would otherwise match those) and an `osVersion` field parsed from a
+`z/OS VnRn` banner. That menu names no security manager, so no
+`securityManager` line is correct. Checked with the fake host replaying that
+screen text; mocks and the classic fake host unchanged.
+
 ## Known gap
 
 `mock-lpar.js`/`mock-zvm.js` don't serve TLS, so the port-992 TLS path in
