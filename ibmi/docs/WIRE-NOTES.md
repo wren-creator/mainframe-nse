@@ -66,13 +66,24 @@ Data starts at byte 11. The record held:
 | `01 07` + 7 bytes | SOH, the length does not count itself | Confirmed |
 | `11 row col` | SBA, set buffer address, 1 based | Confirmed |
 | `20`-`3F` alone | display attribute, takes one screen position | Confirmed |
-| `1D` FFW attr len | SF, start field | Confirmed |
+| `1D` FFW attr len | SF, start field, input field form | Confirmed |
+| `1D` attr | SF, start field, output-only form: no FFW and NO length, text follows at once | Confirmed on the web3270 mock, PUB400 did not use it |
 | `02 row col char` | RA, repeat to address (PUB400 fills with `00`) | Confirmed, end point inclusive is a guess |
 | `04 52 00 00` | ESC Read MDT Fields, ends the record | Confirmed |
 | `03` EA, `10` TD, `15` WDSF, `12` WEA, `14` MC | | Not seen |
 
 Read MDT Fields at the end means the keyboard is open and the server is
 waiting for input. We never answer it.
+
+### Start field has two shapes
+
+An input field is `SF FFW(2) [FCW(2)...] attribute length(2)`. An output-only
+field is `SF attribute` and nothing else, the text follows at once. The length
+belongs to input fields only. My first parser assumed a length every time, and
+it lost the first two characters of every label on web3270's mock AS/400
+(`Sign On` came out as `gn On`). PUB400's sign-on only used the input form, so
+it could not have shown the problem. Same rule as lib5250 and as web3270's own
+`tn5250/session.js`.
 
 ### Screen grid
 
@@ -185,6 +196,15 @@ twin, so the only finding was that the remote command server is reachable.
 The same scan shows why a stock nmap run tells you nothing here:
 `nmap-services` names 8470 to 8474 `cisco-avp`, `pim-port`, `otv`, `vp2p`
 and `noteshare`, and 8475, 8476 and 9470 to 9476 come back `unknown`.
+
+## 3c. A second target: web3270's mock AS/400
+
+`mock-lpar/mock-as400.js` in the web3270 repo is a TN5250 server shaped like a
+stock sign-on screen (System, Subsystem, Display, User, Password, Program,
+Menu, Current library). It is a mock, so it proves our parser reads a stock
+layout, not that real systems send it. Run it with
+`MOCK_AS400_PORT=3272 node mock-lpar/mock-as400.js`. Its other listeners
+(HTTP admin 2001, FTP 2121) are outside what these scripts touch.
 
 ## 4. Test fixtures and mocks
 

@@ -181,18 +181,25 @@ local function parse_orders(data, i, scr, notes)
       i = i + 1 + math.max(l1 * 256 + l2, 2)
       notes.wdsf = (notes.wdsf or 0) + 1
     elseif b == ORD_SF then
-      -- [SF][FFW 2 bytes if first byte is 01xxxxxx][FCW 2 bytes each while
-      -- first byte is 1xxxxxxx][attribute 001xxxxx][length 2 bytes]
+      -- [SF][FFW 2 bytes][FCW 2 bytes each, until the attribute][attribute
+      -- 001xxxxx][length 2 bytes]. The FFW, FCWs and length belong to input
+      -- fields only. An output-only field is just [SF][attribute] and the
+      -- text follows at once, with NO length (lib5250 start_of_field; found
+      -- the hard way when web3270's mock AS/400 lost two characters off
+      -- every label).
       local k = i + 1
       local x = byte(k)
-      if x and (x & 0xC0) == 0x40 then k = k + 2 end
-      x = byte(k)
-      while x and (x & 0x80) == 0x80 do
+      local has_ffw = x ~= nil and (x & 0xE0) ~= 0x20
+      if has_ffw then
         k = k + 2
         x = byte(k)
+        while x and (x & 0xE0) ~= 0x20 do
+          k = k + 2
+          x = byte(k)
+        end
       end
       if x and (x & 0xE0) == 0x20 then k = k + 1 end -- the attribute byte
-      k = k + 2 -- field length
+      if has_ffw then k = k + 2 end -- field length, input fields only
       put(scr, " ") -- the attribute takes one screen position
       i = k
     elseif b >= 0x20 and b <= 0x3F then

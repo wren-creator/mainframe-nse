@@ -30,6 +30,7 @@ done. Nothing below has been verified yet.
 - [x] Read MDT Fields (04 52, two control bytes) ends the sign-on record; no 5250 Query seen, respond-only negotiation was enough (PUB400)
 - [x] Screen grid must match the terminal size, 24x80 for IBM-3179-2
 - [ ] RA fill: inclusive or exclusive of the target address
+- [x] Start field: length only follows an FFW (input fields), output-only fields have none
 - [ ] EA, TD and WDSF length conventions
 - [x] Port mapper: bare ASCII name in, 0x2B plus 4-byte big-endian port out, `-s` secure names (PUB400)
 - [ ] What the port mapper sends back for an unknown name
@@ -40,7 +41,8 @@ done. Nothing below has been verified yet.
 - [x] Sites rename sign-on labels (PUB400: "Server name", "Display name", "Your user name:"), parser now allows that
 - [ ] Sign-on label parsing on more releases and other customized screens
 - [x] Raw record kept as a test fixture
-- [ ] A second fixture from a stock (uncustomized) sign-on screen
+- [x] Second fixture, stock-style layout, from web3270's mock AS/400 (a mock, not a real system)
+- [ ] A fixture from a real stock (uncustomized) sign-on screen
 - [ ] A fixture for the port mapper replies (raw hex is in `docs/WIRE-NOTES.md` for now)
 - [ ] Look into why plain 23 and TLS 992 land in different subsystems (QINTER vs QINTER2 on PUB400)
 - [x] `ibmi-signon-info` run on 8476 and 9476

@@ -30,6 +30,11 @@ Expected: `systemName: PUB400`, `subsystem: QINTER`, `displayDevice: QPADEV0067`
 `clear-unit,write-to-display,read-mdt-fields`. If any of that changes, a parser
 edit broke something that used to work on a real system.
 
+The second fixture, `web3270-mock-as400-signon-record.hex`, comes from web3270's
+mock AS/400 and has a stock-style layout with output-only start fields. Expect
+`systemName: AS400MOCK`, `subsystem: QINTER`, `displayDevice: QPADEV0001`, and
+labels with their first letters intact (`Sign On`, `System`, `User`).
+
 Without the hex argument, the mock sends a small synthetic sign-on screen.
 
 ## Other mocks
@@ -111,7 +116,7 @@ line for it here.
 
 | Script | Live system | Fixture |
 |---|---|---|
-| tn5250-info | PUB400, ports 23 and 992 | `pub400-23-signon-record.hex` |
+| tn5250-info | PUB400, ports 23 and 992; web3270 mock AS/400 | `pub400-23-signon-record.hex`, `web3270-mock-as400-signon-record.hex` |
 | ibmi-svrmap-info | PUB400, port 449 | none yet |
 | ibmi-signon-info | PUB400, ports 8476 and 9476 | none (the dump leaves out the server seed, so the mock is shaped after it) |
 | ibmi-hostservers | PUB400, all 17 ports | none, reads port states only |
