@@ -6,7 +6,7 @@ TN5250 and the IBM i host servers.
 
 ## Status
 
-Planning. Nothing is built yet. See `ROADMAP.md` for the build order and
+One script drafted, `tn5250-info`. It passes against a mock server (`test/mock-tn5250.py`) but has not been run against a real IBM i yet, so treat its output as unverified. See `ROADMAP.md` for the build order and
 `docs/SCOPE.md` for what is in, what is out, and why.
 
 ## Why this exists
@@ -34,10 +34,21 @@ ibmi/
   README.md
   ROADMAP.md
   docs/      scope notes and wire-format notes
+  test/      mock server for local runs
   lib/       Lua libraries (install into ~/.nmap/nselib/)
   scripts/   .nse scripts (install into ~/.nmap/scripts/)
 ```
 
-Install the same way as the parent repo: copy files into `~/.nmap/nselib/`
-and `~/.nmap/scripts/`. Library names get an `mf` prefix so they never
+Install the same way as the parent repo:
+
+```bash
+mkdir -p ~/.nmap/nselib ~/.nmap/scripts
+cp lib/*.lua ~/.nmap/nselib/
+cp scripts/*.nse ~/.nmap/scripts/
+nmap --script tn5250-info -p 23,992 <target>
+```
+
+Add `--script-args tn5250-info.dump=true` to get the screen text and raw
+record bytes in the output, which is what to send along with a bug report.
+ Library names get an `mf` prefix so they never
 shadow anything Nmap ships.
