@@ -64,6 +64,12 @@ more scripts.
 - [x] `ibmi-signon-info` run on 8476 and 9476
 - [ ] Try the sign-on and port mapper scripts on a release other than 7.5
 
+## web3270 side
+
+- [x] JavaScript port of the server mapper and sign-on server probes, `Bridge_server/features/ibmi-recon.js` in web3270 (2026-10-18). Same results as the Lua scripts on PUB400. The 5250 sign-on banner is not part of it, web3270's client already reads that
+- [ ] Share fixtures between the two repos, so a layout fix lands in both with the same test bytes
+- [ ] web3270 Security panel, tutorial part and walkthrough for the probe (tracked in web3270's ROADMAP)
+
 ## Ideas, not committed
 
 - [ ] Fold the TN5250 TLS sub-option report into `tn5250-info` rather than a separate script
