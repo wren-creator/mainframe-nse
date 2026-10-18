@@ -6,7 +6,7 @@ TN5250 and the IBM i host servers.
 
 ## Status
 
-One script drafted, `tn5250-info`. It passes against a mock server (`test/mock-tn5250.py`) but has not been run against a real IBM i yet, so treat its output as unverified. See `ROADMAP.md` for the build order and
+Two scripts drafted, `tn5250-info` and `ibmi-svrmap-info`. Both pass against mock servers in `test/` but have not been run against a real IBM i yet, so treat their output as unverified. See `ROADMAP.md` for the build order and
 `docs/SCOPE.md` for what is in, what is out, and why.
 
 ## Why this exists
@@ -46,6 +46,7 @@ mkdir -p ~/.nmap/nselib ~/.nmap/scripts
 cp lib/*.lua ~/.nmap/nselib/
 cp scripts/*.nse ~/.nmap/scripts/
 nmap --script tn5250-info -p 23,992 <target>
+nmap --script ibmi-svrmap-info -p 449 <target>
 ```
 
 Add `--script-args tn5250-info.dump=true` to get the screen text and raw
