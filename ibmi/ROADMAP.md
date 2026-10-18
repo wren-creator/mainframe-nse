@@ -15,7 +15,7 @@ done. Nothing below has been verified yet.
 
 - [~] `lib/mf5250.lua` + `scripts/tn5250-info.nse` (ports 23, 992): written and passing against `test/mock-tn5250.py`, NOT yet checked against a real IBM i. Sends no device name by default (a custom one can create a device description on the system), opt in with `tn5250-info.devname`
 - [~] `scripts/ibmi-svrmap-info.nse` (449): written, passing against `test/mock-svrmap.py`, NOT yet checked against a real IBM i. Uses `lib/mfibmi.lua`
-- [ ] `lib/mfibmi.lua` + `scripts/ibmi-signon-info.nse` (8476, 9476): exchange attributes request, report server version, password level, whether it answers without auth
+- [~] `scripts/ibmi-signon-info.nse` (8476, 9476): written, passing against `test/mock-signon.py`, NOT yet checked against a real IBM i. Reports OS version, datastream level, password level, CCSID; never prints the server seed
 - [ ] `scripts/ibmi-hostservers.nse` (8470 to 8476, 9470 to 9476): which servers answer plain versus TLS, flag any plain-text exposure
 
 ## Docs and tests
@@ -35,6 +35,11 @@ done. Nothing below has been verified yet.
 - [ ] Port mapper reply: 0x2B then a 4-byte big-endian port? What comes back for an unknown name?
 - [ ] Service names, especially the `-s` secure forms (`as-signon-s` and so on)
 - [ ] Does the mapper allow several lookups on one connection, or one per connection?
+- [ ] Sign-on server request: header layout, server id 0xE009, request id 0x7003, the three client LLCPs (0x1101, 0x1102, 0x1103) and their sizes
+- [ ] Sign-on server reply: id 0xF004, return code in the template, code points 0x1101 / 0x1102 / 0x1103 / 0x1114 / 0x1119 and their sizes
+- [ ] Version encoding: is it really (version<<16)|(release<<8)|mod?
+- [ ] Does a real server want a client seed of a particular shape, or accept random bytes?
+- [ ] Password level 4 and any newer levels: meaning, so the text table is complete
 - [ ] Sign-on label parsing on other releases and customized sign-on screens
 - [ ] Run once with `tn5250-info.dump=true` and keep the raw record as a test fixture
 

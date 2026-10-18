@@ -10,6 +10,7 @@
 -- @license Same as the parent repo (GPLv3) - see LICENSE
 
 local stdnse = require "stdnse"
+local rand = require "rand"
 local nmap = require "nmap"
 local string = require "string"
 local table = require "table"
@@ -92,6 +93,112 @@ function mfibmi.map_servers(host, port, opts)
     rows[#rows + 1] = row
   end
   return rows, errors
+end
+
+-- ── Sign-on server (as-signon, 8476 plain / 9476 TLS) ──────────────────
+
+-- Password level meanings, QPWDLVL. 0 and 1 are the old DES-era levels with
+-- 10 character passwords, 2 and 3 allow long passphrases. Anything else is
+-- reported as the raw number.
+local PWDLVL_TEXT = {
+  [0] = "0 (passwords up to 10 characters, DES-era storage)",
+  [1] = "1 (passwords up to 10 characters, DES-era storage)",
+  [2] = "2 (passphrases up to 128 characters)",
+  [3] = "3 (passphrases up to 128 characters, no old-style hashes kept)",
+}
+
+local function llcp(cp, data)
+  return string.pack(">I4I2", #data + 6, cp) .. data
+end
+
+--- Build the exchange-attributes request: a 20 byte header (length, header
+-- id 0, server id 0xE009, two zero 4-byte fields, template length 0, request
+-- id 0x7003) then three LLCPs: client version, client datastream level and a
+-- client seed. UNVERIFIED: every code point and size here is from memory.
+function mfibmi.build_signon_request()
+  local body = llcp(0x1101, string.pack(">I4", 1)) ..
+    llcp(0x1102, string.pack(">I2", 2)) ..
+    llcp(0x1103, rand.random_string(8))
+  local header = string.pack(">I4I2I2I4I4I2I2", 20 + #body, 0, 0xE009, 0, 0, 0, 0x7003)
+  return header .. body
+end
+
+--- Read one length-prefixed reply (the first 4 bytes are the total length).
+local function read_reply(sock)
+  local status, data = sock:receive_bytes(4)
+  if not status then return nil, "no reply: " .. tostring(data) end
+  local want = string.unpack(">I4", data)
+  if want < 20 or want > 65536 then
+    return nil, string.format("implausible reply length %d", want), data
+  end
+  while #data < want do
+    local s, more = sock:receive_bytes(want - #data)
+    if not s then break end
+    data = data .. more
+  end
+  return data
+end
+
+--- Parse the reply header, template and LLCPs.
+-- UNVERIFIED: reply id 0xF004, return code in the template, and the code
+-- points 0x1101 (server version), 0x1102 (datastream level), 0x1103 (server
+-- seed), 0x1114 (CCSID), 0x1119 (password level).
+function mfibmi.parse_signon_reply(data)
+  local r = { llcps = {} }
+  if #data < 20 then return nil, "reply shorter than a header" end
+  local len, _, server_id = string.unpack(">I4I2I2", data)
+  r.length, r.serverId = len, server_id
+  local tmpl, req_id = string.unpack(">I2I2", data, 17)
+  r.replyId = req_id
+  r.templateLength = tmpl
+  if tmpl >= 4 and #data >= 24 then
+    r.returnCode = string.unpack(">I4", data, 21)
+  end
+  local pos = 21 + tmpl
+  while pos + 5 <= #data do
+    local l, cp = string.unpack(">I4I2", data, pos)
+    if l < 6 or pos + l - 1 > #data then break end
+    r.llcps[#r.llcps + 1] = { cp = cp, data = string.sub(data, pos + 6, pos + l - 1) }
+    pos = pos + l
+  end
+  for _, e in ipairs(r.llcps) do
+    if e.cp == 0x1101 and #e.data == 4 then
+      local v = string.unpack(">I4", e.data)
+      r.version = string.format("V%dR%dM%d", (v >> 16) & 0xFFFF, (v >> 8) & 0xFF, v & 0xFF)
+    elseif e.cp == 0x1102 and #e.data == 2 then
+      r.level = string.unpack(">I2", e.data)
+    elseif e.cp == 0x1103 then
+      r.hasSeed = true -- never reported, it is a one-time value for password encryption
+    elseif e.cp == 0x1114 and #e.data == 4 then
+      r.ccsid = string.unpack(">I4", e.data)
+    elseif e.cp == 0x1119 and #e.data == 1 then
+      r.passwordLevel = string.byte(e.data)
+      r.passwordLevelText = PWDLVL_TEXT[r.passwordLevel] or
+        string.format("%d (not a level this script knows)", r.passwordLevel)
+    end
+  end
+  return r
+end
+
+--- Connect, send the exchange-attributes request, parse the reply.
+-- No user, no password: this is the step every client does before it signs on.
+function mfibmi.signon_exchange(host, port, use_tls, timeout)
+  local sock = nmap.new_socket()
+  sock:set_timeout(timeout or 6000)
+  local ok, err
+  if use_tls then ok, err = sock:connect(host, port, "ssl") else ok, err = sock:connect(host, port) end
+  if not ok then return nil, "connect: " .. tostring(err) end
+  ok, err = sock:send(mfibmi.build_signon_request())
+  if not ok then
+    sock:close()
+    return nil, "send: " .. tostring(err)
+  end
+  local data, rerr, partial = read_reply(sock)
+  sock:close()
+  if not data then return nil, rerr, partial end
+  local parsed, perr = mfibmi.parse_signon_reply(data)
+  if not parsed then return nil, perr, data end
+  return parsed, nil, data
 end
 
 return mfibmi
