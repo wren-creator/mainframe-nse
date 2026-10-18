@@ -16,7 +16,7 @@ done. Nothing below has been verified yet.
 - [~] `lib/mf5250.lua` + `scripts/tn5250-info.nse` (ports 23, 992): written and passing against `test/mock-tn5250.py`, NOT yet checked against a real IBM i. Sends no device name by default (a custom one can create a device description on the system), opt in with `tn5250-info.devname`
 - [~] `scripts/ibmi-svrmap-info.nse` (449): written, passing against `test/mock-svrmap.py`, NOT yet checked against a real IBM i. Uses `lib/mfibmi.lua`
 - [~] `scripts/ibmi-signon-info.nse` (8476, 9476): written, passing against `test/mock-signon.py`, NOT yet checked against a real IBM i. Reports OS version, datastream level, password level, CCSID; never prints the server seed
-- [ ] `scripts/ibmi-hostservers.nse` (8470 to 8476, 9470 to 9476): which servers answer plain versus TLS, flag any plain-text exposure
+- [x] `scripts/ibmi-hostservers.nse` (host rule): summarizes plain versus TLS port states for the host servers and telnet from Nmap's own scan results, makes no connections of its own. Checked against local listeners, no wire format involved
 
 ## Docs and tests
 

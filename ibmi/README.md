@@ -6,7 +6,7 @@ TN5250 and the IBM i host servers.
 
 ## Status
 
-Three scripts drafted, `tn5250-info`, `ibmi-svrmap-info` and `ibmi-signon-info`. All pass against mock servers in `test/` but have not been run against a real IBM i yet, so treat their output as unverified. See `ROADMAP.md` for the build order and
+Four scripts drafted. `tn5250-info`, `ibmi-svrmap-info` and `ibmi-signon-info` pass against mock servers in `test/` but have not been run against a real IBM i yet, so treat their output as unverified. `ibmi-hostservers` only reads Nmap's port states and has been checked against local listeners. See `ROADMAP.md` for the build order and
 `docs/SCOPE.md` for what is in, what is out, and why.
 
 ## Why this exists
@@ -48,6 +48,7 @@ cp scripts/*.nse ~/.nmap/scripts/
 nmap --script tn5250-info -p 23,992 <target>
 nmap --script ibmi-svrmap-info -p 449 <target>
 nmap --script ibmi-signon-info -p 8476,9476 <target>
+nmap -p 23,992,449,8470-8476,9470-9476 --script ibmi-hostservers <target>
 ```
 
 Add `--script-args tn5250-info.dump=true` to get the screen text and raw
