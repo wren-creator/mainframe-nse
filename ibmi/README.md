@@ -51,6 +51,9 @@ nmap --script ibmi-signon-info -p 8476,9476 <target>
 nmap -p 23,992,449,8470-8476,9470-9476 --script ibmi-hostservers <target>
 ```
 
+Byte layouts, with what is confirmed and what is still a guess, are in
+`docs/WIRE-NOTES.md`. Test steps and fixtures are in `test/README.md`.
+
 Add `--script-args tn5250-info.dump=true` to get the screen text and raw
 record bytes in the output, which is what to send along with a bug report.
  Library names get an `mf` prefix so they never

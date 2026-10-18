@@ -9,7 +9,7 @@ done. Nothing below has been verified yet.
 - [ ] Pick the test target: real IBM i, hosted IBM i, or captures only
 - [ ] Capture reference traffic for TN5250 sign-on, port 449 lookups, and the as-signon exchange
 - [x] `lib/mfebcdic.lua`: shared CP037 tables (the 3270 library still has its own copy, fold it in later)
-- [ ] `docs/WIRE-NOTES.md`: confirmed byte layouts, with the source for each
+- [x] `docs/WIRE-NOTES.md`: byte layouts, tagged confirmed, assumed or not seen
 
 ## Scripts
 
@@ -21,7 +21,7 @@ done. Nothing below has been verified yet.
 ## Docs and tests
 
 - [ ] README install and usage section per script, once each exists
-- [ ] Test notes: how each script was checked, against what
+- [x] Test notes: `test/README.md`
 - [ ] Handle non-US EBCDIC code pages on the sign-on screen (CP273, CP500 and friends)
 
 ## Verify against a real system (PUB400 or a capture)
@@ -43,6 +43,8 @@ done. Nothing below has been verified yet.
 - [ ] Sign-on label parsing on more releases and other customized screens
 - [x] Raw record kept as a test fixture
 - [ ] A second fixture from a stock (uncustomized) sign-on screen
+- [ ] A fixture for the port mapper replies (raw hex is in `docs/WIRE-NOTES.md` for now)
+- [ ] Look into why plain 23 and TLS 992 land in different subsystems (QINTER vs QINTER2 on PUB400)
 - [ ] Test on 8476 / 9476 (`ibmi-signon-info`): not run against a real system yet
 
 ## Ideas, not committed
