@@ -68,32 +68,39 @@ local ORD_MC  = 0x14
 local ORD_WDSF = 0x15
 local ORD_SF  = 0x1D
 
--- Big enough for the 27x132 wide screen; a normal 24x80 sign-on just uses
--- the top-left corner.
-local ROWS, COLS = 27, 132
+-- The grid must match the terminal's real size, or text wraps in the wrong
+-- place (PUB400's sign-on writes past column 80 on purpose and relies on the
+-- wrap). 24x80 for the usual types, 27x132 for the wide ones.
+local function size_for(termtype)
+  if termtype and (termtype:find("3477", 1, true) or termtype:find("3180", 1, true)) then
+    return 27, 132
+  end
+  return 24, 80
+end
 
 -- ── Screen grid ─────────────────────────────────────────────────────────
 
-local function new_screen()
-  return { cells = {}, row = 1, col = 1 }
+local function new_screen(termtype)
+  local rows, cols = size_for(termtype)
+  return { cells = {}, row = 1, col = 1, rows = rows, cols = cols }
 end
 
 local function advance(scr)
   scr.col = scr.col + 1
-  if scr.col > COLS then
+  if scr.col > scr.cols then
     scr.col = 1
     scr.row = scr.row + 1
-    if scr.row > ROWS then scr.row = 1 end
+    if scr.row > scr.rows then scr.row = 1 end
   end
 end
 
 local function put(scr, ch)
-  scr.cells[(scr.row - 1) * COLS + scr.col] = ch
+  scr.cells[(scr.row - 1) * scr.cols + scr.col] = ch
   advance(scr)
 end
 
 local function goto_addr(scr, row, col)
-  if row >= 1 and row <= ROWS and col >= 1 and col <= COLS then
+  if row >= 1 and row <= scr.rows and col >= 1 and col <= scr.cols then
     scr.row, scr.col = row, col
   end
 end
@@ -101,10 +108,10 @@ end
 --- The grid as a list of right-trimmed lines, trailing blank rows dropped.
 function mf5250.screen_lines(scr)
   local lines = {}
-  for r = 1, ROWS do
+  for r = 1, scr.rows do
     local chars = {}
-    for c = 1, COLS do
-      chars[c] = scr.cells[(r - 1) * COLS + c] or " "
+    for c = 1, scr.cols do
+      chars[c] = scr.cells[(r - 1) * scr.cols + c] or " "
     end
     lines[r] = (table.concat(chars):gsub("%s+$", ""))
   end
@@ -133,8 +140,8 @@ local function parse_orders(data, i, scr, notes)
     elseif b == ORD_IC or b == ORD_MC then
       i = i + (b == ORD_IC and 3 or 4) -- IC: row col. MC: type row col.
     elseif b == ORD_SOH then
-      -- UNVERIFIED: assumed [SOH][len][len bytes of header]. Some references
-      -- count the length byte itself in len.
+      -- [SOH][len][len bytes of header]. Confirmed against a real IBM i
+      -- (PUB400 capture): len does not count itself.
       local len = byte(i + 1) or 0
       i = i + 2 + len
       notes.soh = len
@@ -143,9 +150,9 @@ local function parse_orders(data, i, scr, notes)
       if not ch then return n + 1 end
       local fill = mfebcdic.char(ch) or " "
       -- Fill up to and including the target address (UNVERIFIED: inclusive).
-      local target = (tr - 1) * COLS + tc
-      local cur = (scr.row - 1) * COLS + scr.col
-      local guard = ROWS * COLS
+      local target = (tr - 1) * scr.cols + tc
+      local cur = (scr.row - 1) * scr.cols + scr.col
+      local guard = scr.rows * scr.cols
       while cur <= target and guard > 0 do
         put(scr, fill)
         cur = cur + 1
@@ -249,6 +256,14 @@ function mf5250.parse_record(rec, scr)
         end
         i = i + math.max(l1 * 256 + l2, 2)
       end
+    elseif cmd == 0x42 or cmd == 0x52 then
+      -- Read Input Fields (0x42) / Read MDT Fields (0x52), each with two
+      -- control bytes. PUB400 ends its sign-on record with 04 52 00 00,
+      -- meaning "keyboard is open, send me the fields", which is what we
+      -- never do.
+      info.commands[#info.commands + 1] = cmd == 0x42 and "read-input-fields" or "read-mdt-fields"
+      info.readPending = true
+      i = i + 4
     else
       info.commands[#info.commands + 1] = string.format("unhandled-0x%02X", cmd)
       info.notes.unhandled = cmd
@@ -261,23 +276,31 @@ end
 -- ── Sign-on screen interpretation ───────────────────────────────────────
 
 --- Pull the facts a sign-on screen gives away out of the text lines.
--- Labels on IBM i look like "System  . . . . . :   PUB400".
+-- Stock labels look like "System  . . . . . :   PUB400". Sites rename them
+-- ("Server name . . . :", "Display name. . . :"), so each label allows an
+-- optional " name" and any run of dots and spaces before the colon.
 function mf5250.parse_signon(lines)
   local out = { messages = {}, copyright = nil }
   local text = table.concat(lines, "\n")
 
-  local function label(name)
-    for _, line in ipairs(lines) do
-      local v = line:match(name .. "[%s%.]*:%s*([%w#@$_%-]+)")
-      if v then return v end
+  local function label(...)
+    for _, name in ipairs({ ... }) do
+      for _, line in ipairs(lines) do
+        local v = line:match(name .. "[%s%.]*:%s*([%w#@$_%-]+)")
+        if v then return v end
+      end
     end
   end
-  out.system = label("System")
+  out.system = label("System", "Server name", "Server")
   out.subsystem = label("Subsystem")
-  out.display = label("Display")
+  out.display = label("Display name", "Display")
 
-  local has_user = text:find("User%s+%.") ~= nil or text:find("User%s*:") ~= nil
-  local has_pass = text:find("Password%s+%.") ~= nil or text:find("Password%s*:") ~= nil
+  -- A user prompt and a password prompt, in the stock wording or close to it
+  -- ("User  . . .", "Your user name:", "Password (max. 128):").
+  local lower = text:lower()
+  local has_user = lower:find("user%s+%.") ~= nil or lower:find("user name") ~= nil or
+    lower:find("user%s*:") ~= nil or lower:find("user id") ~= nil
+  local has_pass = lower:find("password") ~= nil
   out.hasPrompt = has_user and has_pass
   out.titled = text:find("Sign On", 1, true) ~= nil
 
@@ -290,6 +313,11 @@ function mf5250.parse_signon(lines)
       out.messages[#out.messages + 1] = msg:sub(1, 100)
     end
   end
+
+  -- Many sites put the release in their greeting. It is the site's own text,
+  -- so it is a hint, not a measurement.
+  local rel = text:match("IBM i%s+[Vv]?(%d+[%.R]%d+)")
+  if rel then out.releaseHint = rel end
 
   out.isSignon = out.hasPrompt or (out.titled and out.system ~= nil)
   return out
@@ -331,7 +359,7 @@ function mf5250.negotiate(sock, opts)
     records = {},      -- raw record bytes, for the dump arg
     recordInfo = {},
     log = {},
-    screen = new_screen(),
+    screen = new_screen(termtype),
   }
   local function log(dir, note)
     result.log[#result.log + 1] = dir .. ": " .. note
@@ -514,6 +542,7 @@ function mf5250.scan(host, port, opts)
   if si.subsystem then out.subsystem = si.subsystem end
   if si.display then out.displayDevice = si.display end
   if si.copyright then out.copyright = si.copyright end
+  if si.releaseHint then out.releaseHintFromBanner = si.releaseHint end
   if #si.messages > 0 then out.messages = si.messages end
 
   local findings = {}
@@ -531,6 +560,7 @@ function mf5250.scan(host, port, opts)
     end
     out.rawRecords = hex
     out.parsed = {}
+    out.gridSize = string.format("%dx%d", result.screen.rows, result.screen.cols)
     for k, info in ipairs(result.recordInfo) do
       out.parsed[k] = string.format("record %d: %d bytes, gds=%s, commands=%s",
         k, info.bytes, tostring(info.gds), table.concat(info.commands, ","))

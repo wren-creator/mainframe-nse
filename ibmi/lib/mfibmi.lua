@@ -2,9 +2,10 @@
 -- IBM i host server helpers for Nmap NSE: the port mapper on 449 now, the
 -- sign-on server exchange later (see ROADMAP.md).
 --
--- STATUS: the port mapper exchange is written from memory of how IBM's Java
--- toolbox client talks to it, NOT checked against a real IBM i. Spots that
--- depend on that memory are marked UNVERIFIED.
+-- STATUS: the port mapper exchange was checked against a live IBM i 7.5
+-- (PUB400). The sign-on server exchange further down is still written from
+-- memory and NOT checked against a real system. Spots that depend on that
+-- memory are marked UNVERIFIED.
 --
 -- @author Britley Hoff
 -- @license Same as the parent repo (GPLv3) - see LICENSE
@@ -18,7 +19,7 @@ local table = require "table"
 local mfibmi = {}
 
 --- Host servers, in the order we ask. `plain` and `secure` are the service
--- names the port mapper knows them by (UNVERIFIED); `default_*` are the
+-- names the port mapper knows them by (confirmed on PUB400); `default_*` are the
 -- documented default ports, used only to flag a server that has moved.
 mfibmi.SERVERS = {
   { label = "central",  plain = "as-central",  secure = "as-central-s",  default_plain = 8470, default_secure = 9470 },
@@ -31,11 +32,11 @@ mfibmi.SERVERS = {
 }
 
 --- Ask the port mapper for one service's port. One connection per name, the
--- way IBM's own client does it (UNVERIFIED: the server may allow reuse).
+-- way IBM's own client does it. Reuse of one connection is untested.
 --
--- Request: the service name in ASCII, no terminator (UNVERIFIED).
--- Reply:   0x2B ('+') then a 4-byte big-endian port on success; anything
---          else is treated as "not known" (UNVERIFIED).
+-- Request: the service name in ASCII, no terminator (confirmed).
+-- Reply:   0x2B ('+') then a 4-byte big-endian port on success (confirmed);
+--          anything else is treated as "not known" (that reply is UNVERIFIED).
 --
 -- @return "port", number | "unknown", firstbyte | "error", message
 function mfibmi.lookup(host, port, name, timeout)

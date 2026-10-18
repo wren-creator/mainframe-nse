@@ -7,8 +7,8 @@ Connects to a TN5250 service (the terminal protocol behind IBM i, formerly
 AS/400 or iSeries, sign-on screens), completes the RFC 1205 / RFC 4777 telnet
 negotiation, and reads the sign-on screen the server shows before anyone
 logs in. Reports the system name, the subsystem, the display device the
-server assigned, the copyright line (which hints at the OS release), any
-CPF/CPD message on the screen, and whether the sign-on was served over plain
+server assigned, the copyright line, any release the site's greeting
+mentions, any CPF/CPD message on the screen, and whether the sign-on was served over plain
 telnet or TLS.
 
 Nmap has no built-in TN5250 support, so a plain version scan of port 23 or
@@ -23,7 +23,8 @@ default it also sends no device name, so the server assigns an ordinary
 QPADEV virtual device and nothing new is created on the system. IBM i locks
 profiles after repeated failed sign-ons, so this script never attempts one.
 
-STATUS: written from the RFCs, not yet verified against a real IBM i.
+STATUS: checked against PUB400 (IBM i 7.5) on ports 23 and 992. Other releases
+and heavily customized sign-on screens may still surprise it.
 ]]
 
 ---

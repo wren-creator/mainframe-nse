@@ -13,8 +13,8 @@ done. Nothing below has been verified yet.
 
 ## Scripts
 
-- [~] `lib/mf5250.lua` + `scripts/tn5250-info.nse` (ports 23, 992): written and passing against `test/mock-tn5250.py`, NOT yet checked against a real IBM i. Sends no device name by default (a custom one can create a device description on the system), opt in with `tn5250-info.devname`
-- [~] `scripts/ibmi-svrmap-info.nse` (449): written, passing against `test/mock-svrmap.py`, NOT yet checked against a real IBM i. Uses `lib/mfibmi.lua`
+- [x] `lib/mf5250.lua` + `scripts/tn5250-info.nse` (ports 23, 992): checked against PUB400 (IBM i 7.5) on 23 and 992, 2026-10-18. Regression fixture in `test/fixtures/`. Sends no device name by default (a custom one can create a device description on the system), opt in with `tn5250-info.devname`
+- [x] `scripts/ibmi-svrmap-info.nse` (449): checked against PUB400, 2026-10-18, all 14 lookups matched the documented ports. Uses `lib/mfibmi.lua`
 - [~] `scripts/ibmi-signon-info.nse` (8476, 9476): written, passing against `test/mock-signon.py`, NOT yet checked against a real IBM i. Reports OS version, datastream level, password level, CCSID; never prints the server seed
 - [x] `scripts/ibmi-hostservers.nse` (host rule): summarizes plain versus TLS port states for the host servers and telnet from Nmap's own scan results, makes no connections of its own. Checked against local listeners, no wire format involved
 
@@ -26,22 +26,24 @@ done. Nothing below has been verified yet.
 
 ## Verify against a real system (PUB400 or a capture)
 
-- [ ] SOH length byte: does it count itself? (`parse_orders`, marked UNVERIFIED)
+- [x] SOH length byte does not count itself (PUB400 capture)
+- [x] Read MDT Fields (04 52, two control bytes) ends the sign-on record; no 5250 Query seen, respond-only negotiation was enough (PUB400)
+- [x] Screen grid must match the terminal size, 24x80 for IBM-3179-2
 - [ ] RA fill: inclusive or exclusive of the target address
 - [ ] EA, TD and WDSF length conventions
-- [ ] Does the server send a 5250 Query (WSF) that has to be answered before the sign-on screen appears?
-- [ ] Does it need a proactive WILL from us, or is respond-only enough?
-- [ ] Port mapper request: bare ASCII service name, no terminator?
-- [ ] Port mapper reply: 0x2B then a 4-byte big-endian port? What comes back for an unknown name?
-- [ ] Service names, especially the `-s` secure forms (`as-signon-s` and so on)
+- [x] Port mapper: bare ASCII name in, 0x2B plus 4-byte big-endian port out, `-s` secure names (PUB400)
+- [ ] What the port mapper sends back for an unknown name
 - [ ] Does the mapper allow several lookups on one connection, or one per connection?
 - [ ] Sign-on server request: header layout, server id 0xE009, request id 0x7003, the three client LLCPs (0x1101, 0x1102, 0x1103) and their sizes
 - [ ] Sign-on server reply: id 0xF004, return code in the template, code points 0x1101 / 0x1102 / 0x1103 / 0x1114 / 0x1119 and their sizes
 - [ ] Version encoding: is it really (version<<16)|(release<<8)|mod?
 - [ ] Does a real server want a client seed of a particular shape, or accept random bytes?
 - [ ] Password level 4 and any newer levels: meaning, so the text table is complete
-- [ ] Sign-on label parsing on other releases and customized sign-on screens
-- [ ] Run once with `tn5250-info.dump=true` and keep the raw record as a test fixture
+- [x] Sites rename sign-on labels (PUB400: "Server name", "Display name", "Your user name:"), parser now allows that
+- [ ] Sign-on label parsing on more releases and other customized screens
+- [x] Raw record kept as a test fixture
+- [ ] A second fixture from a stock (uncustomized) sign-on screen
+- [ ] Test on 8476 / 9476 (`ibmi-signon-info`): not run against a real system yet
 
 ## Ideas, not committed
 

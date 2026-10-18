@@ -18,8 +18,7 @@ Only asks for port numbers. It does not connect to any host server it finds,
 and it never touches the remote command server (as-rmtcmd) beyond naming its
 port.
 
-STATUS: written from memory of IBM's client behavior, not yet verified
-against a real IBM i.
+STATUS: checked against a live IBM i 7.5 (PUB400).
 ]]
 
 ---

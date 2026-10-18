@@ -6,7 +6,7 @@ TN5250 and the IBM i host servers.
 
 ## Status
 
-Four scripts drafted. `tn5250-info`, `ibmi-svrmap-info` and `ibmi-signon-info` pass against mock servers in `test/` but have not been run against a real IBM i yet, so treat their output as unverified. `ibmi-hostservers` only reads Nmap's port states and has been checked against local listeners. See `ROADMAP.md` for the build order and
+Four scripts. `tn5250-info` and `ibmi-svrmap-info` have been run against a live IBM i 7.5 (PUB400). `ibmi-signon-info` passes against a mock only, so treat its output as unverified until it has seen a real sign-on server. `ibmi-hostservers` only reads Nmap's port states and has been checked against local listeners. See `ROADMAP.md` for the build order and
 `docs/SCOPE.md` for what is in, what is out, and why.
 
 ## Why this exists

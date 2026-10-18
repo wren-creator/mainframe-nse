@@ -5,7 +5,10 @@ It follows the RFC 4777 flow as *I* understand it, so it proves the script
 and this mock agree with each other. It does NOT prove either one matches a
 real IBM i. Check against PUB400 or a capture for that.
 
-Usage: mock-tn5250.py [port]      (default 2323, no root needed)
+Usage: mock-tn5250.py [port] [record.hex]
+       default port 2323 (no root needed). With a hex file, the mock replays that
+       captured 5250 record instead of the synthetic sign-on screen, e.g.
+       test/fixtures/pub400-23-signon-record.hex
 """
 import socket, sys
 
@@ -63,7 +66,10 @@ def handle(conn):
     conn.sendall(bytes([IAC, SB, NEWENV, 1, IAC, SE]))
     got += read_until(conn, bytes([IAC, SE]))
     print("client said:", got.hex())
-    scr = signon_screen("MOCKI1", "QINTER", "QPADEV0003")
+    if len(sys.argv) > 2:
+        scr = bytes.fromhex(open(sys.argv[2]).read().strip())
+    else:
+        scr = signon_screen("MOCKI1", "QINTER", "QPADEV0003")
     conn.sendall(scr.replace(b"\xff", b"\xff\xff") + bytes([IAC, EOR]))
     try:
         conn.settimeout(2)
