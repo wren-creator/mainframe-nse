@@ -135,7 +135,9 @@ depend on either.
 
 ## 3. Sign-on server on 8476 and 9476 (`ibmi-signon-info`)
 
-All **assumed**. Not yet run against a real system.
+**Confirmed** on PUB400 over both plain 8476 and TLS 9476, 2026-10-18. The
+request layout was accepted as written. The reply differed from the first
+draft in two places, both fixed.
 
 ```
 request   20 byte header: length(4) 0000 E009 00000000 00000000 0000 7003
@@ -143,21 +145,46 @@ request   20 byte header: length(4) 0000 E009 00000000 00000000 0000 7003
             1101 client version      00000001
             1102 datastream level    0002
             1103 client seed         8 random bytes
-reply     same 20 byte header with request id F004, a template that starts
-          with a 4 byte return code, then LLCPs:
-            1101 server version      4 bytes, (version<<16)|(release<<8)|mod
-            1102 datastream level    2 bytes
+reply     same 20 byte header, server id E009, reply id F003, template length
+          4 (the return code), then LLCPs:
+            1101 server version      00070500 = V7R5M0
+            1102 datastream level    000F = 15
             1103 server seed         8 bytes, never printed
-            1114 CCSID               4 bytes
-            1119 password level      1 byte, the QPWDLVL value
+            1119 password level      03
+            111F server job name     00000000 then EBCDIC text
 ```
 
-Password level meaning: 0 and 1 give 10 character passwords with DES-era
-storage, 2 and 3 allow passphrases up to 128 characters. Levels above 3 print
-as a raw number until their meaning is checked.
+Differences from the first draft:
 
-If the first live run fails, the script prints the raw reply with the error.
-Send that and the layout above gets fixed from real bytes.
+- The reply id is `F003`, not `F004` as I first assumed.
+- `1114` (CCSID) is not sent by this server. The parser still reads it if
+  one ever does, but that is unverified.
+- `111F` is new. After 4 zero bytes it holds the job that answered, in EBCDIC,
+  as `number/user/name`: `135258/QUSER/QZSOSIGN` on the plain port,
+  `135988/QUSER/QZSOSIGN` over TLS. The number is the system's job counter, so
+  it climbs between runs.
+
+The version encoding `(version<<16)|(release<<8)|mod` held:
+`00070500` is V7R5M0, which also agrees with the "IBM i 7.5" in PUB400's
+greeting.
+
+Password level meaning: 0 and 1 give 10 character passwords with DES-era
+storage, 2 and 3 allow passphrases up to 128 characters. PUB400 reports 3.
+Levels above 3 print as a raw number until their meaning is checked.
+
+Random bytes were accepted as the client seed.
+
+If a future run fails, the script prints the raw reply with the error.
+
+## 3b. Port states (`ibmi-hostservers`)
+
+No wire format, it reads nmap's own scan results. On PUB400 all of 23, 992,
+449, 8470 to 8476 and 9470 to 9476 were open, every plain port had its TLS
+twin, so the only finding was that the remote command server is reachable.
+
+The same scan shows why a stock nmap run tells you nothing here:
+`nmap-services` names 8470 to 8474 `cisco-avp`, `pim-port`, `otv`, `vp2p`
+and `noteshare`, and 8475, 8476 and 9470 to 9476 come back `unknown`.
 
 ## 4. Test fixtures and mocks
 

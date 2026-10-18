@@ -113,7 +113,7 @@ line for it here.
 |---|---|---|
 | tn5250-info | PUB400, ports 23 and 992 | `pub400-23-signon-record.hex` |
 | ibmi-svrmap-info | PUB400, port 449 | none yet |
-| ibmi-signon-info | not yet | none |
-| ibmi-hostservers | not yet | none, reads port states only |
+| ibmi-signon-info | PUB400, ports 8476 and 9476 | none (the dump leaves out the server seed, so the mock is shaped after it) |
+| ibmi-hostservers | PUB400, all 17 ports | none, reads port states only |
 
 Full byte layouts and their confidence levels: `docs/WIRE-NOTES.md`.

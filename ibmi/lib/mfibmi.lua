@@ -12,6 +12,7 @@
 
 local stdnse = require "stdnse"
 local rand = require "rand"
+local mfebcdic = require "mfebcdic"
 local nmap = require "nmap"
 local string = require "string"
 local table = require "table"
@@ -115,7 +116,7 @@ end
 --- Build the exchange-attributes request: a 20 byte header (length, header
 -- id 0, server id 0xE009, two zero 4-byte fields, template length 0, request
 -- id 0x7003) then three LLCPs: client version, client datastream level and a
--- client seed. UNVERIFIED: every code point and size here is from memory.
+-- client seed. Accepted by PUB400, so the request layout is confirmed.
 function mfibmi.build_signon_request()
   local body = llcp(0x1101, string.pack(">I4", 1)) ..
     llcp(0x1102, string.pack(">I2", 2)) ..
@@ -141,9 +142,11 @@ local function read_reply(sock)
 end
 
 --- Parse the reply header, template and LLCPs.
--- UNVERIFIED: reply id 0xF004, return code in the template, and the code
--- points 0x1101 (server version), 0x1102 (datastream level), 0x1103 (server
--- seed), 0x1114 (CCSID), 0x1119 (password level).
+-- Confirmed on PUB400 (7.5): server id 0xE009, reply id 0xF003 (not F004 as
+-- first assumed), a 4 byte return code in the template, and code points
+-- 0x1101 server version, 0x1102 datastream level, 0x1103 server seed,
+-- 0x1119 password level, 0x111F server job name. 0x1114 (CCSID) was in the
+-- first draft and PUB400 does not send it.
 function mfibmi.parse_signon_reply(data)
   local r = { llcps = {} }
   if #data < 20 then return nil, "reply shorter than a header" end
@@ -171,7 +174,11 @@ function mfibmi.parse_signon_reply(data)
     elseif e.cp == 0x1103 then
       r.hasSeed = true -- never reported, it is a one-time value for password encryption
     elseif e.cp == 0x1114 and #e.data == 4 then
-      r.ccsid = string.unpack(">I4", e.data)
+      r.ccsid = string.unpack(">I4", e.data) -- not sent by PUB400 (7.5), UNVERIFIED
+    elseif e.cp == 0x111F and #e.data > 4 then
+      -- Confirmed on PUB400: 4 bytes (all zero there) then the server job
+      -- name in EBCDIC as "number/user/name", e.g. 135258/QUSER/QZSOSIGN.
+      r.serverJob = mfebcdic.to_ascii(string.sub(e.data, 5))
     elseif e.cp == 0x1119 and #e.data == 1 then
       r.passwordLevel = string.byte(e.data)
       r.passwordLevelText = PWDLVL_TEXT[r.passwordLevel] or

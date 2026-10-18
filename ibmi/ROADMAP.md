@@ -15,7 +15,7 @@ done. Nothing below has been verified yet.
 
 - [x] `lib/mf5250.lua` + `scripts/tn5250-info.nse` (ports 23, 992): checked against PUB400 (IBM i 7.5) on 23 and 992, 2026-10-18. Regression fixture in `test/fixtures/`. Sends no device name by default (a custom one can create a device description on the system), opt in with `tn5250-info.devname`
 - [x] `scripts/ibmi-svrmap-info.nse` (449): checked against PUB400, 2026-10-18, all 14 lookups matched the documented ports. Uses `lib/mfibmi.lua`
-- [~] `scripts/ibmi-signon-info.nse` (8476, 9476): written, passing against `test/mock-signon.py`, NOT yet checked against a real IBM i. Reports OS version, datastream level, password level, CCSID; never prints the server seed
+- [x] `scripts/ibmi-signon-info.nse` (8476, 9476): checked against PUB400 on plain and TLS, 2026-10-18. Reports OS version, datastream level, password level and the server job name; never prints the server seed
 - [x] `scripts/ibmi-hostservers.nse` (host rule): summarizes plain versus TLS port states for the host servers and telnet from Nmap's own scan results, makes no connections of its own. Checked against local listeners, no wire format involved
 
 ## Docs and tests
@@ -34,10 +34,8 @@ done. Nothing below has been verified yet.
 - [x] Port mapper: bare ASCII name in, 0x2B plus 4-byte big-endian port out, `-s` secure names (PUB400)
 - [ ] What the port mapper sends back for an unknown name
 - [ ] Does the mapper allow several lookups on one connection, or one per connection?
-- [ ] Sign-on server request: header layout, server id 0xE009, request id 0x7003, the three client LLCPs (0x1101, 0x1102, 0x1103) and their sizes
-- [ ] Sign-on server reply: id 0xF004, return code in the template, code points 0x1101 / 0x1102 / 0x1103 / 0x1114 / 0x1119 and their sizes
-- [ ] Version encoding: is it really (version<<16)|(release<<8)|mod?
-- [ ] Does a real server want a client seed of a particular shape, or accept random bytes?
+- [x] Sign-on server request and reply layouts (PUB400): reply id is F003, 1114 is not sent, 111F is the server job name, version encoding holds, random seed accepted
+- [ ] CCSID (0x1114): which releases send it, if any
 - [ ] Password level 4 and any newer levels: meaning, so the text table is complete
 - [x] Sites rename sign-on labels (PUB400: "Server name", "Display name", "Your user name:"), parser now allows that
 - [ ] Sign-on label parsing on more releases and other customized screens
@@ -45,7 +43,8 @@ done. Nothing below has been verified yet.
 - [ ] A second fixture from a stock (uncustomized) sign-on screen
 - [ ] A fixture for the port mapper replies (raw hex is in `docs/WIRE-NOTES.md` for now)
 - [ ] Look into why plain 23 and TLS 992 land in different subsystems (QINTER vs QINTER2 on PUB400)
-- [ ] Test on 8476 / 9476 (`ibmi-signon-info`): not run against a real system yet
+- [x] `ibmi-signon-info` run on 8476 and 9476
+- [ ] Try the sign-on and port mapper scripts on a release other than 7.5
 
 ## Ideas, not committed
 

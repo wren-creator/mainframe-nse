@@ -7,8 +7,8 @@ description = [[
 Talks to the IBM i sign-on server (as-signon, 8476 plain or 9476 TLS) and
 does the exchange-attributes step every IBM i client does before it signs on.
 The server answers with its OS version (V7R4M0 style), its datastream level,
-and its password level (the QPWDLVL system value), all without a user ID or
-password.
+its password level (the QPWDLVL system value), and the name of the server
+job that answered, all without a user ID or password.
 
 The password level is the useful finding for a security review. Levels 0 and
 1 limit passwords to 10 characters and keep older, weaker storage forms.
@@ -17,8 +17,7 @@ SAFETY: sends no user ID and no password, and never starts a sign-on. The
 server seed in the reply is not printed. Does not touch any other host
 server.
 
-STATUS: written from memory of IBM's client protocol, not yet verified
-against a real IBM i. Use the dump argument on the first real run.
+STATUS: checked against a live IBM i 7.5 (PUB400), plain and TLS.
 ]]
 
 ---
@@ -38,8 +37,8 @@ against a real IBM i. Use the dump argument on the first real run.
 -- |   tls: false
 -- |   osVersion: V7R4M0
 -- |   datastreamLevel: 5
--- |   passwordLevel: 2 (passphrases up to 128 characters)
--- |_  ccsid: 37
+-- |   passwordLevel: 3 (passphrases up to 128 characters, no old-style hashes kept)
+-- |_  serverJob: 135258/QUSER/QZSOSIGN
 
 author = "Britley Hoff"
 license = "Same as the parent repo (GPLv3) - see LICENSE"
@@ -77,6 +76,7 @@ action = function(host, port)
   if r.version then out.osVersion = r.version end
   if r.level then out.datastreamLevel = r.level end
   if r.passwordLevelText then out.passwordLevel = r.passwordLevelText end
+  if r.serverJob then out.serverJob = r.serverJob end
   if r.ccsid then out.ccsid = r.ccsid end
   if r.returnCode and r.returnCode ~= 0 then
     out.returnCode = string.format("0x%08X", r.returnCode)
