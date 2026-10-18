@@ -62,7 +62,9 @@ from-scratch Lua reimplementation, cross-checked against (not copied from)
 ## IBM i / TN5250
 
 The `ibmi/` subdirectory is the home for TN5250 and IBM i (AS/400) recon
-scripts. Planning only so far, see `ibmi/ROADMAP.md`.
+scripts, no credentials needed: `tn5250-info`, `ibmi-svrmap-info`,
+`ibmi-signon-info` and `ibmi-hostservers`. All four have been run against a
+live IBM i 7.5. See `ibmi/README.md`, and `ibmi/ROADMAP.md` for what's next.
 
 ## Status
 

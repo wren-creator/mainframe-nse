@@ -60,6 +60,10 @@ detector+renderer, Wire Inspector correlator, MITM live traffic
 modification, Pool/Exhaustion dashboard, and the full IBM i (AS/400)
 security suite.
 
+The unauthenticated slice of IBM i does fit NSE, and lives in `ibmi/`: the
+sign-on screen over TN5250, the server mapper, the sign-on server, and the
+host server port exposure. The authenticated IBM i work stays out.
+
 The RACF credential probe and RACF timing attack sit at the edge — Nmap does
 have precedent for wordlist-style `brute` category scripts (`ssh-brute`,
 `ftp-brute`), but there's still no 3270 auth-handshake library to hang that
