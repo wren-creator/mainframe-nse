@@ -29,7 +29,7 @@ Nmap's single-host, one-shot scan model. What's here is the one slice that
 does: passive protocol-level fingerprinting from a single connect, the same
 shape as Nmap's own `-sV` version detection.
 
-The banner/message-ID classification rules in `lib/tn3270.lua` are a
+The banner/message-ID classification rules in `lib/mf3270.lua` are a
 from-scratch Lua reimplementation, cross-checked against (not copied from)
 `Bridge_server/public/js/rendering.js` (`_FP_RULES`) and
 `Bridge_server/features/esm-fingerprint.js` (`RULES`) in the `web3270` repo.
@@ -67,15 +67,21 @@ was built against. Public at https://github.com/wren-creator/mainframe-nse.
 
 ## Installing
 
-Nmap finds `require`d libraries only in its own `nselib` directory, so copy
-both files, and recopy `lib/tn3270.lua` after every pull (a stale copy is the
-usual cause of odd errors):
+Nmap finds `require`d libraries only in its own search path, so copy the
+library and the script into `~/.nmap`, which Nmap checks automatically. No
+`sudo`, and the stock install stays untouched. Recopy `lib/mf3270.lua` after
+every pull (a stale copy is the usual cause of odd errors):
 
 ```bash
-sudo cp lib/tn3270.lua "$(nmap --datadir)/nselib/tn3270.lua"
-sudo cp scripts/tn3270-info.nse "$(nmap --datadir)/scripts/tn3270-info.nse"
+mkdir -p ~/.nmap/nselib ~/.nmap/scripts
+cp lib/mf3270.lua ~/.nmap/nselib/
+cp scripts/tn3270-info.nse ~/.nmap/scripts/
 nmap --script tn3270-info -p23 <target>
 ```
+
+The library is named `mf3270`, not `tn3270`, on purpose: stock Nmap already
+ships its own `nselib/tn3270.lua` (used by `tn3270-screen`), and a file with
+the same name would shadow it.
 
 If a scan fails, the script prints an `error` and a `trace` of the raw bytes
 the host sent and the options we answered, no `-d` needed. Send that trace

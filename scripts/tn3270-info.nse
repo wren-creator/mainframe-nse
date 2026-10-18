@@ -1,6 +1,6 @@
 local shortport = require "shortport"
 local stdnse = require "stdnse"
-local tn3270 = require "tn3270"
+local tn3270 = require "mf3270"
 
 description = [[
 Connects to a TN3270E service (the terminal protocol behind IBM mainframe

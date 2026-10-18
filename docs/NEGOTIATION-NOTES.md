@@ -1,6 +1,6 @@
 # TN3270E negotiation reference
 
-Notes used while writing `lib/tn3270.lua`. Cross-checked against the working
+Notes used while writing `lib/mf3270.lua`. Cross-checked against the working
 implementation in `web3270`'s `Bridge_server/tn3270/session.js` (which
 negotiates the other side of this same exchange — client role there, we're
 implementing the client role here too, since Nmap connects out like any

@@ -7,18 +7,17 @@ just a plan, it's also the record of what that testing found and fixed.
 
 ## 1. Install the library where Nmap can find it
 
-`lib/tn3270.lua` isn't part of stock Nmap's `nselib`, so `require "tn3270"`
-needs it placed somewhere Nmap's Lua search path covers. Copy it into your
-Nmap install's own library directory:
+`lib/mf3270.lua` isn't part of stock Nmap's `nselib`, so `require "mf3270"`
+needs it placed somewhere Nmap's Lua search path covers. Copy it into
+your user Nmap directory:
 
 ```bash
-cp ~/git/mainframe-nse/lib/tn3270.lua "$(nmap --datadir)/nselib/tn3270.lua"
+mkdir -p ~/.nmap/nselib ~/.nmap/scripts
+cp ~/git/mainframe-nse/lib/mf3270.lua ~/.nmap/nselib/
 ```
 
-(`nmap --datadir` prints the directory; on this machine it's
-`/opt/homebrew/Cellar/nmap/<version>/share/nmap`, and `nmap --datadir` alone
-without a following path errors — use `find "$(brew --prefix nmap 2>/dev/null || echo /opt/homebrew)" -type d -name nselib` if it moves.)
-Re-run this cp after any edit to `lib/tn3270.lua` — Nmap doesn't read it from
+(`~/.nmap` is one of the places Nmap looks automatically, so no `sudo` and no
+hunting for the Homebrew Cellar path.) Re-run this cp after any edit to `lib/mf3270.lua` — Nmap doesn't read it from
 this repo directly, only from wherever this copy lands.
 
 ## 2. Start a mock target
@@ -54,7 +53,7 @@ nmap --script ~/git/mainframe-nse/test/tn3270-info-local.nse -p 3271 localhost
 
 `test/tn3270-info-local.nse` is committed in this repo specifically so this
 doesn't need regenerating by hand each time — it's the same script, sharing
-all its logic with the real one via `tn3270.scan()` in `lib/tn3270.lua`, just
+all its logic with the real one via `tn3270.scan()` in `lib/mf3270.lua`, just
 with `3270`/`3271` added to its portrule. Never point it at anything but a
 local mock.
 
@@ -76,7 +75,7 @@ Compare `hostType`/`securityManager` in the script's output against what
 
 A mismatch means either a Lua pattern was translated wrong from the
 JS `_FP_RULES`/`RULES` tables, or the negotiation/EBCDIC-extraction layer in
-`lib/tn3270.lua` isn't reading the first screen correctly — check
+`lib/mf3270.lua` isn't reading the first screen correctly — check
 `result.log` (enable with `-d2` for `stdnse.debug2` output) to see the raw
 negotiation trace before digging into the classification tables.
 
@@ -137,7 +136,7 @@ EOR`/`BINARY` and an EBCDIC "RACF LOGON PARAMETERS" screen ending in
 `IAC EOR`. Before the fix: host times out, script prints nothing. After: the
 script reports `tn3270e: false`, `deviceType: (classic TN3270, no
 TN3270E)`, `securityManager: RACF`. Both web3270 mocks re-checked, results
-unchanged. Remember to recopy `lib/tn3270.lua` into `nselib` after pulling
+unchanged. Remember to recopy `lib/mf3270.lua` into `nselib` after pulling
 this.
 
 ## FUNCTIONS counter-proposal (2026-10-17)

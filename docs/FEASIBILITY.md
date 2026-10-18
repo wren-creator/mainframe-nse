@@ -12,7 +12,7 @@ Two facts drive the whole analysis:
    SSH, there is no `tn3270.lua`/`stdnse` module to build on. Any NSE script
    that needs to speak the actual 3270/5250 datastream (BIND-image, field
    attributes, orders, EBCDIC translation) means writing that protocol
-   library from scratch in Lua — this repo's `lib/tn3270.lua` is that
+   library from scratch in Lua — this repo's `lib/mf3270.lua` is that
    from-scratch work, not a port of anything.
 2. **NSE scripts are single-host, short-timeout, and stateless-by-design.**
    They're built for one connect → probe → classify → done, not for driving
@@ -63,11 +63,11 @@ security suite.
 The RACF credential probe and RACF timing attack sit at the edge — Nmap does
 have precedent for wordlist-style `brute` category scripts (`ssh-brute`,
 `ftp-brute`), but there's still no 3270 auth-handshake library to hang that
-on. Revisit only after `lib/tn3270.lua` grows a full field/AID-send layer,
+on. Revisit only after `lib/mf3270.lua` grows a full field/AID-send layer,
 which is out of scope for v1.
 
 ## Recommendation
 
-Build `scripts/tn3270-info.nse` + `lib/tn3270.lua` (Category A). Treat the
+Build `scripts/tn3270-info.nse` + `lib/mf3270.lua` (Category A). Treat the
 Category B TLS overlap as a documentation note, not a script. Leave Category
 C alone indefinitely — it belongs to `web3270`, not this repo.
