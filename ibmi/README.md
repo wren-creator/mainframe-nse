@@ -1,0 +1,43 @@
+# ibmi: TN5250 and IBM i (AS/400) recon scripts
+
+NSE scripts for IBM i, the other half of the mainframe-adjacent world. The
+parent repo covers z/OS over TN3270E. This subdirectory covers IBM i over
+TN5250 and the IBM i host servers.
+
+## Status
+
+Planning. Nothing is built yet. See `ROADMAP.md` for the build order and
+`docs/SCOPE.md` for what is in, what is out, and why.
+
+## Why this exists
+
+Nothing in stock Nmap speaks TN5250 or the IBM i host server protocols. A
+plain `nmap -sV` against 23, 449 or 8476 on an IBM i reports an open port, or
+a wrong service name (8470 to 8474 are labeled `cisco-avp`, `otv` and similar
+in `nmap-services`). These scripts fix that, one connect at a time, with no
+credentials.
+
+## Rules of the road
+
+- **No credentials, ever.** IBM i locks profiles (including `QSECOFR`) after
+  `MAXSIGN` failed sign-ons. Nothing here sends a user ID or password, and
+  there is no `brute` category script.
+- **Single connect, read, report.** Same shape as `tn3270-info`.
+- **Nothing that touches `as-rmtcmd` (8475)**, the remote command server.
+- **Lean on stock Nmap for TLS.** Run `ssl-cert` and `ssl-enum-ciphers` on
+  992 and 9470 to 9476 alongside these scripts.
+
+## Layout
+
+```
+ibmi/
+  README.md
+  ROADMAP.md
+  docs/      scope notes and wire-format notes
+  lib/       Lua libraries (install into ~/.nmap/nselib/)
+  scripts/   .nse scripts (install into ~/.nmap/scripts/)
+```
+
+Install the same way as the parent repo: copy files into `~/.nmap/nselib/`
+and `~/.nmap/scripts/`. Library names get an `mf` prefix so they never
+shadow anything Nmap ships.

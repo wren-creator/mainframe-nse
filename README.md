@@ -59,6 +59,11 @@ from-scratch Lua reimplementation, cross-checked against (not copied from)
   — that's already covered by Nmap's own `ssl-cert` and `ssl-enum-ciphers`
   scripts. Run those alongside this one for the full picture.
 
+## IBM i / TN5250
+
+The `ibmi/` subdirectory is the home for TN5250 and IBM i (AS/400) recon
+scripts. Planning only so far, see `ibmi/ROADMAP.md`.
+
 ## Status
 
 Early / v1. See `docs/FEASIBILITY.md` for scope boundaries and
