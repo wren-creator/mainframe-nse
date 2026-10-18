@@ -59,7 +59,7 @@ more scripts.
 - [x] Raw record kept as a test fixture
 - [x] Second fixture, stock-style layout, from web3270's mock AS/400 (a mock, not a real system)
 - [ ] A fixture from a real stock (uncustomized) sign-on screen
-- [ ] A fixture for the port mapper replies (raw hex is in `docs/WIRE-NOTES.md` for now)
+- [x] Fixture for the port mapper replies, `test/fixtures/pub400-hostserver.json`
 - [ ] Look into why plain 23 and TLS 992 land in different subsystems (QINTER vs QINTER2 on PUB400)
 - [x] `ibmi-signon-info` run on 8476 and 9476
 - [ ] Try the sign-on and port mapper scripts on a release other than 7.5
@@ -67,8 +67,8 @@ more scripts.
 ## web3270 side
 
 - [x] JavaScript port of the server mapper and sign-on server probes, `Bridge_server/features/ibmi-recon.js` in web3270 (2026-10-18). Same results as the Lua scripts on PUB400. The 5250 sign-on banner is not part of it, web3270's client already reads that
-- [ ] Share fixtures between the two repos, so a layout fix lands in both with the same test bytes
-- [ ] web3270 Security panel, tutorial part and walkthrough for the probe (tracked in web3270's ROADMAP)
+- [x] Fixtures shared between the two repos (2026-10-18): the live host server capture and both 5250 sign-on records, replayed by the Lua scripts here (`test/replay-hostserver.py`) and by the probe's tests in web3270
+- [x] web3270 Security panel, tutorial Part 52, walkthrough and cheat sheet row, with an opt-in 5250 sign-on screen read
 
 ## Ideas, not committed
 

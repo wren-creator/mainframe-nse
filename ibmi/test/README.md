@@ -37,6 +37,29 @@ labels with their first letters intact (`Sign On`, `System`, `User`).
 
 Without the hex argument, the mock sends a small synthetic sign-on screen.
 
+## Replay the live host server capture
+
+`fixtures/pub400-hostserver.json` holds the mapper replies and the sign-on
+server reply captured from a live IBM i 7.5, plus the values they must decode
+to. The seed in the sign-on reply is a placeholder, the real one is one time and
+was never kept. Serve it and point the Lua scripts at it:
+
+```bash
+python3 test/replay-hostserver.py &          # mapper on 4449, sign-on on 8476
+nmap -Pn -p 4449,8476 --script ibmi-svrmap-info,ibmi-signon-info \
+  --script-args ibmi-svrmap-info.ports=4449,ibmi-signon-info.ports=8476 127.0.0.1
+pkill -f replay-hostserver
+```
+
+Expected: all seven servers on 8470 to 8476 and 9470 to 9476, `V7R5M0`,
+datastream level 15, password level 3, job `135258/QUSER/QZSOSIGN`.
+
+**The same file is shared with web3270.** Its copy is
+`Bridge_server/features/fixtures/ibmi-pub400-hostserver.json`, and its tests
+replay it through the JavaScript probe. Change the bytes here first, then copy.
+The two 5250 sign-on records in `fixtures/` are shared the same way, and
+web3270's own 5250 parser reads them correctly.
+
 ## Other mocks
 
 ```bash
@@ -117,8 +140,8 @@ line for it here.
 | Script | Live system | Fixture |
 |---|---|---|
 | tn5250-info | PUB400, ports 23 and 992; web3270 mock AS/400 | `pub400-23-signon-record.hex`, `web3270-mock-as400-signon-record.hex` |
-| ibmi-svrmap-info | PUB400, port 449 | none yet |
-| ibmi-signon-info | PUB400, ports 8476 and 9476 | none (the dump leaves out the server seed, so the mock is shaped after it) |
+| ibmi-svrmap-info | PUB400, port 449 | `pub400-hostserver.json` (mapper replies) |
+| ibmi-signon-info | PUB400, ports 8476 and 9476 | `pub400-hostserver.json` (sign-on reply, seed replaced by a placeholder) |
 | ibmi-hostservers | PUB400, all 17 ports | none, reads port states only |
 
 Full byte layouts and their confidence levels: `docs/WIRE-NOTES.md`.

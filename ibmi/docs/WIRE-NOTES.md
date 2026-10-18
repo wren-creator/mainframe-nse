@@ -208,6 +208,10 @@ layout, not that real systems send it. Run it with
 
 ## 4. Test fixtures and mocks
 
+The captured bytes are shared with the JavaScript probe in the web3270
+project, so a layout fix is checked against the same real bytes in both. See
+`test/README.md` for what is shared and how to replay it.
+
 Mocks are in `test/`, each written from the same reading of the protocol as
 the script it feeds. They prove the two agree, nothing more. The real
 evidence is the capture in `test/fixtures/`. See `test/README.md`.
